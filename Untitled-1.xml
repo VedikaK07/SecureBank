@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SecureBankDB>
+
+  <!-- ── NODE A: Mumbai Region ── -->
+  <Node id="A" region="Mumbai" port="5433" role="primary">
+
+    <Accounts>
+      <Account id="ACC001">
+        <Name>Aarav Shah</Name>
+        <Balance currency="INR">250000.00</Balance>
+        <Region>Mumbai</Region>
+        <Node>A</Node>
+        <CreatedAt>2024-01-10</CreatedAt>
+      </Account>
+      <Account id="ACC009">
+        <Name>Karan Desai</Name>
+        <Balance currency="INR">550000.00</Balance>
+        <Region>Mumbai</Region>
+        <Node>A</Node>
+        <CreatedAt>2024-01-15</CreatedAt>
+      </Account>
+    </Accounts>
+
+    <Transactions>
+      <Transaction id="TXN-8821" type="TRANSFER">
+        <FromAccount>ACC001</FromAccount>
+        <ToAccount>ACC034</ToAccount>
+        <Amount currency="INR">85000</Amount>
+        <Status>completed</Status>
+        <Protocol>2PC</Protocol>
+        <Date>2025-04-03</Date>
+        <FraudFlagged>true</FraudFlagged>
+      </Transaction>
+      <Transaction id="TXN-8822" type="DEPOSIT">
+        <FromAccount>ACC009</FromAccount>
+        <ToAccount>ACC009</ToAccount>
+        <Amount currency="INR">30000</Amount>
+        <Status>completed</Status>
+        <Protocol>direct</Protocol>
+        <Date>2025-04-03</Date>
+        <FraudFlagged>false</FraudFlagged>
+      </Transaction>
+    </Transactions>
+
+    <FraudAlerts>
+      <Alert id="ALT-101">
+        <TxnRef>TXN-8821</TxnRef>
+        <AccountRef>ACC001</AccountRef>
+        <Rule>RUL-01: High Value Transfer</Rule>
+        <RiskLevel>HIGH</RiskLevel>
+        <Status>pending</Status>
+        <Date>2025-04-03</Date>
+      </Alert>
+    </FraudAlerts>
+
+    <LoanApplications>
+      <Loan id="LOAN-201">
+        <AccountRef>ACC001</AccountRef>
+        <Type>Home</Type>
+        <Amount currency="INR">2500000</Amount>
+        <CreditScore>780</CreditScore>
+        <FraudScore>0</FraudScore>
+        <Status>approved</Status>
+        <Date>2025-04-01</Date>
+      </Loan>
+      <Loan id="LOAN-202">
+        <AccountRef>ACC009</AccountRef>
+        <Type>Personal</Type>
+        <Amount currency="INR">500000</Amount>
+        <CreditScore>540</CreditScore>
+        <FraudScore>60</FraudScore>
+        <Status>pending</Status>
+        <Date>2025-04-02</Date>
+      </Loan>
+    </LoanApplications>
+
+  </Node>
+
+  <!-- ── NODE B: Delhi/Bangalore Region ── -->
+  <Node id="B" region="Delhi" port="5434" role="primary">
+    <!-- ACC034–ACC100, Transactions, FraudAlerts, Loans -->
+    <Accounts>
+      <Account id="ACC034">
+        <Name>Neeraj Aggarwal</Name>
+        <Balance currency="INR">310000.00</Balance>
+        <Region>Delhi</Region>
+        <Node>B</Node>
+        <CreatedAt>2024-02-05</CreatedAt>
+      </Account>
+    </Accounts>
+  </Node>
+
+  <!-- ── NODE C: Replica of Node A ── -->
+  <Node id="C" region="Mumbai" port="5435" role="replica">
+    <!-- Streaming replica of Node A — read-only -->
+  </Node>
+
+</SecureBankDB>

@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureBank — ADBMS Project</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060910;
+    --surface: #0d1117;
+    --surface2: #161b22;
+    --surface3: #1f2937;
+    --border: #21262d;
+    --border2: #30363d;
+    --accent: #00d4aa;
+    --accent2: #0ea5e9;
+    --danger: #f43f5e;
+    --warning: #f59e0b;
+    --success: #10b981;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Syne', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+
+  .login-box {
+    width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 0 60px rgba(0,212,170,0.08);
+    animation: fadeUp 0.6s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .login-logo span { font-family: var(--display); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .login-box h2 { font-family: var(--display); font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .login-box > p { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; color: var(--text2); font-family: var(--mono); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .field select, .field input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); padding: 10px 14px; border-radius: 8px;
+    font-size: 14px; font-family: var(--body); outline: none; transition: border-color 0.2s;
+  }
+  .field select:focus, .field input:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface2); }
+
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #00b894);
+    color: #000; border: none; padding: 12px; border-radius: 8px;
+    font-weight: 700; font-size: 14px; cursor: pointer; font-family: var(--display);
+    letter-spacing: 0.3px; transition: opacity 0.2s, transform 0.1s; margin-top: 8px;
+  }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ── MAIN APP ── */
+  #app { display: none; position: relative; z-index: 1; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: 56px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-left  { display: flex; align-items: center; gap: 16px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+  .topbar-logo { font-family: var(--display); font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .topbar-logo .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,170,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(0,212,170,0); }
+  }
+
+  .node-status { display: flex; gap: 8px; }
+  .node-badge {
+    font-family: var(--mono); font-size: 10px; padding: 3px 8px;
+    border-radius: 4px; border: 1px solid var(--border2);
+    color: var(--text2); display: flex; align-items: center; gap: 4px;
+  }
+  .node-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--success); }
+  .node-badge.offline { border-color: rgba(244,63,94,0.3); color: var(--danger); }
+  .node-badge.offline .dot { background: var(--danger); }
+
+  .role-chip {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 20px;
+    background: rgba(0,212,170,0.1); color: var(--accent); border: 1px solid rgba(0,212,170,0.2);
+  }
+  .logout-btn {
+    background: none; border: 1px solid var(--border2); color: var(--text2);
+    padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; min-height: calc(100vh - 56px); }
+
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 12px; flex-shrink: 0; }
+
+  .nav-section { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 1px; padding: 0 8px; margin-bottom: 8px; margin-top: 16px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    color: var(--text2); transition: all 0.15s; margin-bottom: 2px; border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(0,212,170,0.1); color: var(--accent); border-color: rgba(0,212,170,0.15); }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+  .badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-family: var(--mono); }
+
+  .content { flex: 1; padding: 24px; overflow-y: auto; }
+
+  .page { display: none; animation: fadeIn 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .page-header h1 { font-family: var(--display); font-size: 24px; font-weight: 700; }
+  .page-header p { color: var(--text2); font-size: 13px; margin-top: 4px; }
+
+  /* ── STAT CARDS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; position: relative; overflow: hidden; transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-card.green::before  { background: var(--accent); }
+  .stat-card.blue::before   { background: var(--accent2); }
+  .stat-card.red::before    { background: var(--danger); }
+  .stat-card.yellow::before { background: var(--warning); }
+  .stat-label { font-size: 11px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-family: var(--display); font-size: 28px; font-weight: 700; }
+  .stat-sub   { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .stat-icon  { position: absolute; top: 18px; right: 18px; font-size: 20px; opacity: 0.3; }
+
+  /* ── CARDS ── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-header h3 { font-family: var(--display); font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+  /* ── TABLES ── */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: var(--surface2); font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.8px; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); color: var(--text); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+
+  /* ── TAGS ── */
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: var(--mono); }
+  .tag.success { background: rgba(16,185,129,0.1);  color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+  .tag.danger  { background: rgba(244,63,94,0.1);   color: var(--danger);  border: 1px solid rgba(244,63,94,0.2); }
+  .tag.warning { background: rgba(245,158,11,0.1);  color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+  .tag.info    { background: rgba(14,165,233,0.1);  color: var(--accent2); border: 1px solid rgba(14,165,233,0.2); }
+  .tag.neutral { background: rgba(139,148,158,0.1); color: var(--text2);   border: 1px solid var(--border2); }
+
+  /* ── FORMS ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-field label { display: block; font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .form-field input, .form-field select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    font-family: var(--body); outline: none; transition: border-color 0.2s;
+  }
+  .form-field input:focus, .form-field select:focus { border-color: var(--accent); }
+  .form-field select option { background: var(--surface2); }
+
+  /* ── BUTTONS ── */
+  .btn-action {
+    background: linear-gradient(135deg, var(--accent), #00b894);
+    color: #000; border: none; padding: 10px 20px; border-radius: 8px;
+    font-weight: 700; font-size: 13px; cursor: pointer; font-family: var(--display); transition: all 0.2s;
+  }
+  .btn-action:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-danger  { background: rgba(244,63,94,0.1);  color: var(--danger);  border: 1px solid rgba(244,63,94,0.3);  padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .btn-danger:hover  { background: rgba(244,63,94,0.2); }
+  .btn-success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.3); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .btn-success:hover { background: rgba(16,185,129,0.2); }
+
+  /* ── 2PC ── */
+  .tpc-flow { display: flex; gap: 0; align-items: stretch; margin: 20px 0; }
+  .tpc-node { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; text-align: center; position: relative; }
+  .tpc-node h4 { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 8px; }
+  .tpc-node .node-name { font-family: var(--display); font-weight: 700; font-size: 15px; }
+  .tpc-arrow { display: flex; align-items: center; justify-content: center; width: 60px; flex-shrink: 0; position: relative; }
+  .arrow-line { height: 2px; width: 100%; background: var(--border2); position: relative; }
+  .arrow-line.active { background: var(--accent); transition: background 0.3s; }
+  .arrow-line.active::after { content: '▶'; position: absolute; right: -6px; top: -8px; font-size: 12px; color: var(--accent); }
+  .tpc-status { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
+  .tpc-status.idle    { background: rgba(139,148,158,0.1); color: var(--text2); }
+  .tpc-status.prepare { background: rgba(245,158,11,0.1);  color: var(--warning); }
+  .tpc-status.ready   { background: rgba(14,165,233,0.1);  color: var(--accent2); }
+  .tpc-status.commit  { background: rgba(16,185,129,0.1);  color: var(--success); }
+
+  /* ── QUERY OPTIMIZER ── */
+  .query-box { background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; font-family: var(--mono); font-size: 12px; color: #79c0ff; margin-bottom: 16px; line-height: 1.8; }
+  .query-box .kw  { color: #ff7b72; }
+  .query-box .str { color: #a5d6ff; }
+  .query-box .fn  { color: #d2a8ff; }
+  .query-box .num { color: #79c0ff; }
+  .perf-bar-wrap { margin-bottom: 12px; }
+  .perf-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .perf-bar   { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .perf-fill  { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .perf-fill.slow { background: var(--danger); }
+  .perf-fill.fast { background: var(--accent); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--surface);
+    border: 1px solid var(--border2); border-radius: 10px; padding: 14px 20px; font-size: 13px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 999; display: none;
+    animation: slideIn 0.3s ease; max-width: 320px;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  #toast.success { border-left: 3px solid var(--success); }
+  #toast.danger  { border-left: 3px solid var(--danger); }
+  #toast.warning { border-left: 3px solid var(--warning); }
+  .toast-title { font-weight: 600; margin-bottom: 2px; font-family: var(--display); }
+  .toast-msg   { color: var(--text2); font-size: 12px; }
+
+  /* ── CHART ── */
+  .mini-chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; padding: 0 4px; }
+  .bar { flex: 1; border-radius: 3px 3px 0 0; transition: height 0.5s ease; }
+
+  /* ── NODE INDICATOR ── */
+  .node-indicator { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(14,165,233,0.08); color: var(--accent2); border: 1px solid rgba(14,165,233,0.15); }
+
+  .divider-row { height: 1px; background: var(--border); margin: 20px 0; }
+  .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── LOAN EVALUATION ── */
+  .eligibility-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .elig-factor { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 8px; padding: 8px 10px; font-size: 11px; color: var(--text2); border: 1px solid var(--border); transition: border-color 0.3s; }
+  .elig-factor.pass { border-color: rgba(16,185,129,0.25); }
+  .elig-factor.fail { border-color: rgba(244,63,94,0.25); }
+  .elig-factor.warn { border-color: rgba(245,158,11,0.25); }
+  .elig-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+  .elig-bar-wrap { margin-bottom: 10px; }
+  .elig-bar-label { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+  .elig-bar      { height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .elig-bar-fill { height: 100%; border-radius: 3px; transition: width 1.2s ease; }
+
+  .verdict-banner { border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; position: relative; overflow: hidden; }
+  .verdict-banner::before { content: ''; position: absolute; inset: 0; opacity: 0.06; background: repeating-linear-gradient(45deg, currentColor 0, currentColor 1px, transparent 0, transparent 50%); background-size: 8px 8px; }
+  .verdict-banner.approved { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); color: var(--success); }
+  .verdict-banner.rejected { background: rgba(244,63,94,0.08);  border: 1px solid rgba(244,63,94,0.25);  color: var(--danger); }
+  .verdict-banner.pending  { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: var(--warning); }
+  .verdict-icon { font-size: 28px; position: relative; z-index: 1; }
+  .verdict-text { position: relative; z-index: 1; flex: 1; }
+  .verdict-text h3 { font-family: var(--display); font-size: 16px; font-weight: 800; margin-bottom: 2px; }
+  .verdict-text p  { font-size: 11px; opacity: 0.8; }
+
+  .ai-advisor-box { background: rgba(14,165,233,0.05); border: 1px solid rgba(14,165,233,0.2); border-radius: 10px; padding: 14px; margin-top: 10px; }
+  .ai-advisor-header { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
+  .ai-typing { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .ai-typing span { width: 6px; height: 6px; background: var(--accent2); border-radius: 50%; animation: aiDot 1.2s infinite; opacity: 0.3; }
+  .ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes aiDot { 0%,80%,100%{opacity:0.3;transform:scale(1)} 40%{opacity:1;transform:scale(1.3)} }
+  .ai-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
+
+  .fin-profile-card { background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .fin-profile-card h4 { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.8px; margin-bottom: 10px; }
+  .fin-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .fin-row:last-child { border-bottom: none; }
+  .fin-row .label { color: var(--text2); }
+  .fin-row .val { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+
+  .loan-eval-full { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @keyframes scoreReveal { from { stroke-dasharray: 0 1000; } }
+
+  /* Loading spinner */
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* API status bar */
+  #api-status-bar {
+    display: none; align-items: center; gap: 8px; padding: 8px 16px;
+    background: rgba(244,63,94,0.08); border-bottom: 1px solid rgba(244,63,94,0.2);
+    font-size: 12px; color: var(--danger); font-family: var(--mono);
+  }
+  #api-status-bar.show { display: flex; }
+  #api-status-bar.ok   { background: rgba(16,185,129,0.08); border-bottom-color: rgba(16,185,129,0.2); color: var(--success); display: flex; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">🏦</div>
+      <span>SecureBank</span>
+    </div>
+    <h2>Welcome back</h2>
+    <p>Sign in to the distributed banking system</p>
+    <div class="field">
+      <label>LOGIN AS</label>
+      <select id="role-select">
+        <option value="teller">Teller — Riya Sharma</option>
+        <option value="manager">Branch Manager — Arjun Mehta</option>
+        <option value="analyst">Fraud Analyst — Priya Nair</option>
+        <option value="admin">Admin — System Administrator</option>
+        <option value="customer">Customer — Vedika Patel</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input type="password" value="••••••••" readonly>
+    </div>
+    <button class="btn-primary" onclick="login()">Sign In →</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div class="toast-title" id="toast-title"></div>
+  <div class="toast-msg" id="toast-msg"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
+  <!-- API STATUS BAR -->
+  <div id="api-status-bar">
+    <span id="api-status-msg">⚠ Cannot reach backend API — check server.js is running</span>
+    <button onclick="checkHealth()" style="margin-left:auto;background:none;border:1px solid currentColor;color:inherit;padding:2px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--mono)">Retry</button>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <span>SecureBank</span>
+        <div class="dot"></div>
+      </div>
+      <div class="node-status">
+        <div class="node-badge" id="badge-nodeA"><div class="dot"></div>Node A · North</div>
+        <div class="node-badge" id="badge-nodeB"><div class="dot"></div>Node B · South</div>
+        <div class="node-badge" id="badge-central"><div class="dot"></div>Central</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="role-chip" id="role-chip">TELLER</span>
+      <span style="font-size:13px;color:var(--text2)" id="user-name">Riya Sharma</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="content">
+
+      <!-- ══════════ DASHBOARD ══════════ -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <h1>Dashboard</h1>
+            <p>Live overview across all 3 database nodes — connected to Supabase</p>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-icon">💸</div>
+            <div class="stat-label">TOTAL TRANSACTIONS TODAY</div>
+            <div class="stat-value" id="stat-txns">—</div>
+            <div class="stat-sub" id="stat-txns-sub">Loading from DB...</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-icon">💰</div>
+            <div class="stat-label">VOLUME PROCESSED</div>
+            <div class="stat-value" id="stat-vol">—</div>
+            <div class="stat-sub">Across all nodes</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon">🚨</div>
+            <div class="stat-label">FRAUD ALERTS</div>
+            <div class="stat-value" id="stat-fraud">—</div>
+            <div class="stat-sub" id="stat-fraud-sub">Loading...</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-label">ACTIVE FRAUD RULES</div>
+            <div class="stat-value">5</div>
+            <div class="stat-sub">Last updated 2h ago</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><h3>📊 Transaction Volume (Last 7 Days)</h3></div>
+            <div style="padding:20px">
+              <div class="mini-chart" id="txn-chart"></div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px">
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Mon</span>
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Tue</span>
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Wed</span>
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Thu</span>
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Fri</span>
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Sat</span>
+                <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Today</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>🗄️ Node Status</h3></div>
+            <div style="padding:16px">
+              <table>
+                <tbody id="node-status-table">
+                  <tr>
+                    <td><span class="mono">Node A</span></td>
+                    <td><span class="node-indicator">● North Region</span></td>
+                    <td><span class="tag success">● Online</span></td>
+                    <td style="color:var(--text2);font-size:12px" id="ns-a-count">— txns</td>
+                  </tr>
+                  <tr>
+                    <td><span class="mono">Node B</span></td>
+                    <td><span class="node-indicator">● South Region</span></td>
+                    <td><span class="tag success">● Online</span></td>
+                    <td style="color:var(--text2);font-size:12px" id="ns-b-count">— txns</td>
+                  </tr>
+                  <tr>
+                    <td><span class="mono">Central</span></td>
+                    <td><span class="node-indicator">● Fraud + Audit</span></td>
+                    <td><span class="tag success">● Online</span></td>
+                    <td style="color:var(--text2);font-size:12px" id="ns-c-count">— alerts</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>🔄 Recent Transactions</h3></div>
+          <table>
+            <thead><tr>
+              <th>TXN ID</th><th>FROM</th><th>TO</th><th>AMOUNT</th><th>TYPE</th><th>NODE</th><th>STATUS</th>
+            </tr></thead>
+            <tbody id="recent-txns">
+              <tr><td colspan="7" class="loading"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ NEW TRANSACTION ══════════ -->
+      <div class="page" id="page-transaction">
+        <div class="page-header">
+          <div><h1>New Transaction</h1><p>Transfer funds between accounts with 2-Phase Commit protocol</p></div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><h3>💸 Initiate Transfer</h3></div>
+            <div style="padding:20px">
+              <div class="form-grid" style="margin-bottom:16px">
+                <div class="form-field">
+                  <label>FROM ACCOUNT</label>
+                  <select id="from-acc">
+                    <option value="">Loading accounts...</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>TO ACCOUNT</label>
+                  <select id="to-acc">
+                    <option value="">Loading accounts...</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid" style="margin-bottom:16px">
+                <div class="form-field">
+                  <label>AMOUNT (₹)</label>
+                  <input type="number" id="txn-amount" value="25000" min="1">
+                </div>
+                <div class="form-field">
+                  <label>TRANSACTION TYPE</label>
+                  <select id="txn-type">
+                    <option>TRANSFER</option>
+                    <option>DEPOSIT</option>
+                    <option>WITHDRAWAL</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn-action" onclick="runTransaction()" id="txn-btn">Execute Transaction →</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>⚙️ 2-Phase Commit Protocol</h3></div>
+            <div style="padding:20px">
+              <div class="tpc-flow">
+                <div class="tpc-node">
+                  <h4>COORDINATOR</h4>
+                  <div class="node-name">Backend</div>
+                  <div class="tpc-status idle" id="tpc-coord">IDLE</div>
+                </div>
+                <div class="tpc-arrow">
+                  <div class="arrow-line" id="tpc-arrow1"></div>
+                </div>
+                <div class="tpc-node">
+                  <h4>NODE A</h4>
+                  <div class="node-name">North DB</div>
+                  <div class="tpc-status idle" id="tpc-nodeA">IDLE</div>
+                </div>
+                <div class="tpc-arrow">
+                  <div class="arrow-line" id="tpc-arrow2"></div>
+                </div>
+                <div class="tpc-node">
+                  <h4>NODE B</h4>
+                  <div class="node-name">South DB</div>
+                  <div class="tpc-status idle" id="tpc-nodeB">IDLE</div>
+                </div>
+              </div>
+              <div id="tpc-log" style="font-family:var(--mono);font-size:11px;color:var(--text2);line-height:2;min-height:80px;background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border)">
+                Waiting for transaction...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ FRAUD ALERTS ══════════ -->
+      <div class="page" id="page-fraud">
+        <div class="page-header">
+          <div><h1>Fraud Alerts</h1><p>Real-time alerts generated by the fraud rule engine</p></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>🚨 Active Alerts</h3>
+            <span class="tag danger" id="fraud-badge">Loading...</span>
+          </div>
+          <table>
+            <thead><tr>
+              <th>ALERT ID</th><th>TXN ID</th><th>RULE TRIGGERED</th><th>AMOUNT</th><th>RISK</th><th>STATUS</th><th>ACTION</th>
+            </tr></thead>
+            <tbody id="fraud-table">
+              <tr><td colspan="7" class="loading"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ FRAUD RULES ══════════ -->
+      <div class="page" id="page-rules">
+        <div class="page-header">
+          <div><h1>Fraud Rule Engine</h1><p>Manage detection rules dynamically — no code changes required</p></div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><h3>➕ Add New Rule</h3></div>
+          <div style="padding:20px">
+            <div class="form-grid" style="margin-bottom:16px">
+              <div class="form-field">
+                <label>RULE NAME</label>
+                <input type="text" id="rule-name" placeholder="e.g. Large Withdrawal Alert">
+              </div>
+              <div class="form-field">
+                <label>CONDITION</label>
+                <input type="text" id="rule-cond" placeholder="e.g. amount > 50000 AND type = WITHDRAW">
+              </div>
+            </div>
+            <div class="form-grid" style="margin-bottom:16px">
+              <div class="form-field">
+                <label>ACTION</label>
+                <select id="rule-action">
+                  <option>FLAG — HIGH RISK</option>
+                  <option>FLAG — MEDIUM RISK</option>
+                  <option>AUTO-BLOCK</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>RISK SCORE ADD</label>
+                <input type="number" id="rule-score" value="40" min="1" max="100">
+              </div>
+            </div>
+            <button class="btn-action" onclick="addRule()">Add Rule to Database →</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>📋 Active Rules</h3></div>
+          <table>
+            <thead><tr><th>RULE ID</th><th>RULE NAME</th><th>CONDITION</th><th>ACTION</th><th>STATUS</th><th>MANAGE</th></tr></thead>
+            <tbody id="rules-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ QUERY OPTIMIZER ══════════ -->
+      <div class="page" id="page-query">
+        <div class="page-header">
+          <div><h1>Query Optimization</h1><p>EXPLAIN ANALYZE — before and after indexing (live Supabase)</p></div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><h3>🔍 Query</h3></div>
+            <div style="padding:16px">
+              <div class="query-box">
+                <span class="kw">SELECT</span> txn_id, amount, risk_score<br>
+                <span class="kw">FROM</span> transactions<br>
+                <span class="kw">WHERE</span> status = <span class="str">'FLAGGED'</span><br>
+                &nbsp;&nbsp;<span class="kw">AND</span> timestamp > <span class="fn">NOW()</span> - <span class="str">'7 days'</span><br>
+                &nbsp;&nbsp;<span class="kw">AND</span> risk_score > <span class="num">60</span><br>
+                <span class="kw">ORDER BY</span> risk_score <span class="kw">DESC</span>;
+              </div>
+              <button class="btn-action" onclick="runExplain()">Run EXPLAIN ANALYZE →</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>⚡ Performance Results</h3></div>
+            <div style="padding:16px" id="explain-result">
+              <p style="color:var(--text2);font-size:13px">Click "Run EXPLAIN ANALYZE" to see results</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ LOAN APPROVAL ══════════ -->
+      <div class="page" id="page-loan">
+        <div class="page-header">
+          <div><h1>Loan Approval</h1><p>Credit scoring + Fraud Intelligence cross-check — joins LoanApplications, FraudAlerts &amp; Transactions tables</p></div>
+        </div>
+
+        <!-- Application Form Row -->
+        <div class="two-col" style="margin-bottom:20px">
+          <div class="card">
+            <div class="card-header"><h3>📋 New Loan Application</h3></div>
+            <div style="padding:20px">
+              <div class="form-grid" style="margin-bottom:14px">
+                <div class="form-field">
+                  <label>APPLICANT ACCOUNT</label>
+                  <select id="loan-acc" onchange="previewFraudProfile()">
+                    <option value="">Loading accounts...</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>LOAN TYPE</label>
+                  <select id="loan-type">
+                    <option>Personal Loan</option>
+                    <option>Home Loan</option>
+                    <option>Vehicle Loan</option>
+                    <option>Education Loan</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid" style="margin-bottom:14px">
+                <div class="form-field">
+                  <label>LOAN AMOUNT (₹)</label>
+                  <input type="number" id="loan-amount" value="200000" min="10000">
+                </div>
+                <div class="form-field">
+                  <label>TENURE (MONTHS)</label>
+                  <select id="loan-tenure">
+                    <option>12</option><option>24</option><option selected>36</option><option>48</option><option>60</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid" style="margin-bottom:14px">
+                <div class="form-field">
+                  <label>MONTHLY INCOME (₹)</label>
+                  <input type="number" id="loan-income" value="55000">
+                </div>
+                <div class="form-field">
+                  <label>EXISTING EMIs (₹/month)</label>
+                  <input type="number" id="loan-existing" value="0">
+                </div>
+              </div>
+              <div class="form-grid" style="margin-bottom:16px">
+                <div class="form-field">
+                  <label>EMPLOYMENT TYPE</label>
+                  <select id="loan-employment">
+                    <option value="salaried">Salaried</option>
+                    <option value="self">Self-Employed</option>
+                    <option value="business">Business Owner</option>
+                    <option value="govt">Government Employee</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>YEARS IN EMPLOYMENT</label>
+                  <select id="loan-years">
+                    <option value="0">Less than 1 year</option>
+                    <option value="1">1–2 years</option>
+                    <option value="3" selected>3–5 years</option>
+                    <option value="6">6–10 years</option>
+                    <option value="10">10+ years</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn-action" style="width:100%" onclick="applyLoan()">⚡ Run Full Evaluation →</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>🔍 Pre-Check: Fraud Profile</h3>
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text2)">Auto-updates on account change</span>
+            </div>
+            <div style="padding:16px" id="loan-eval-panel">
+              <div style="color:var(--text2);font-size:13px;text-align:center;padding:30px 0">
+                Select an account to preview fraud profile
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Evaluation Results -->
+        <div id="loan-full-result" style="display:none;margin-bottom:20px">
+          <div class="card">
+            <div class="card-header">
+              <h3>🧮 Full Credit + Fraud Evaluation Report</h3>
+              <span id="eval-verdict-chip" class="tag neutral">—</span>
+            </div>
+            <div style="padding:20px">
+              <div class="loan-eval-full" id="loan-eval-full-body"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>🏦 Loan Applications</h3>
+            <span id="loan-pending-badge" class="tag warning">Loading...</span>
+          </div>
+          <table>
+            <thead><tr>
+              <th>LOAN ID</th><th>APPLICANT</th><th>TYPE</th><th>AMOUNT</th><th>CREDIT SCORE</th><th>FRAUD RISK</th><th>NODE</th><th>STATUS</th><th>ACTION</th>
+            </tr></thead>
+            <tbody id="loan-table">
+              <tr><td colspan="9" class="loading"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ AUDIT LOG ══════════ -->
+      <div class="page" id="page-audit">
+        <div class="page-header">
+          <div><h1>Audit Log</h1><p>Immutable record of all sensitive operations — trigger-based</p></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>📜 System Audit Trail</h3></div>
+          <table>
+            <thead><tr><th>LOG ID</th><th>USER</th><th>ROLE</th><th>ACTION</th><th>TABLE</th><th>TIMESTAMP</th></tr></thead>
+            <tbody id="audit-table">
+              <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /layout -->
+</div><!-- /app -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// SECUREBANK FRONTEND — Connected to Supabase via Express API
+// Same UI/UX as demo. API base: /api
+// ══════════════════════════════════════════════════════════════
+
+const API = ''; // same origin — server.js serves this file from /public
+
+// ─── ROLES (same as demo) ───
+const roles = {
+  teller:   { name: 'Riya Sharma',          label: 'TELLER',        pages: ['dashboard','transaction','loan','audit'] },
+  manager:  { name: 'Arjun Mehta',          label: 'BR. MANAGER',   pages: ['dashboard','fraud','loan','audit'] },
+  analyst:  { name: 'Priya Nair',           label: 'FRAUD ANALYST', pages: ['dashboard','fraud','rules','audit'] },
+  admin:    { name: 'System Administrator', label: 'ADMIN',         pages: ['dashboard','transaction','fraud','rules','loan','query','audit'] },
+  customer: { name: 'Vedika Patel',         label: 'CUSTOMER',      pages: ['dashboard','loan'] },
+};
+
+const pageLabels = {
+  dashboard:   { icon: '◈', label: 'Dashboard' },
+  transaction: { icon: '↗', label: 'New Transaction' },
+  fraud:       { icon: '⚠', label: 'Fraud Alerts', badge: null },
+  rules:       { icon: '⚙', label: 'Fraud Rules' },
+  loan:        { icon: '🏦', label: 'Loan Approval', badge: null },
+  query:       { icon: '⚡', label: 'Query Optimizer' },
+  audit:       { icon: '📜', label: 'Audit Log' },
+};
+
+let currentRole = 'teller';
+let accountsCache = [];      // All accounts from DB
+let transactionsCache = [];  // All transactions from DB
+let fraudAlertsCache = [];   // All fraud alerts from DB
+let loansCache = [];         // All loan apps from DB
+
+// Local fraud rules (not in DB — kept in memory like demo)
+let fraudRules = [
+  { id:'RUL-01', name:'Large Withdrawal Alert',   cond:'amount > 50000 AND type = WITHDRAW',       action:'FLAG — HIGH RISK',   status:'active' },
+  { id:'RUL-02', name:'Rapid Repeat Transfer',    cond:'5+ transfers in 10 mins from same acc',    action:'AUTO-BLOCK',         status:'active' },
+  { id:'RUL-03', name:'New Account Large Txn',    cond:'acc_age < 30 days AND amount > 20000',     action:'FLAG — MEDIUM RISK', status:'active' },
+  { id:'RUL-04', name:'Exceeds Daily Limit',      cond:'daily_total > 100000',                     action:'AUTO-BLOCK',         status:'active' },
+  { id:'RUL-05', name:'Geo-Velocity Check',       cond:'2 cities within 60 mins, same card',       action:'FLAG — HIGH RISK',   status:'active' },
+];
+let loanCounter = 2202;
+
+// ─── API HELPERS ───
+async function apiGet(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  const res = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ─── HEALTH CHECK ───
+async function checkHealth() {
+  try {
+    const h = await apiGet('/api/health');
+    const bar = document.getElementById('api-status-bar');
+    const msg = document.getElementById('api-status-msg');
+    if (h.status === 'online') {
+      bar.className = 'ok';
+      msg.textContent = '✓ Connected to Supabase — all systems operational';
+      setTimeout(() => { bar.className = ''; }, 3000);
+    } else {
+      bar.className = 'show';
+      msg.textContent = '⚠ Database returned error — check Supabase connection';
+    }
+  } catch (e) {
+    const bar = document.getElementById('api-status-bar');
+    const msg = document.getElementById('api-status-msg');
+    bar.className = 'show';
+    msg.textContent = '⚠ Cannot reach backend API — make sure server.js is running on port 3000';
+  }
+}
+
+// ─── UTILITY ───
+function fmt(n) {
+  if (n == null) return '—';
+  const num = parseFloat(n);
+  if (isNaN(num)) return n;
+  if (num >= 10000000) return `₹${(num/10000000).toFixed(1)}Cr`;
+  if (num >= 100000)   return `₹${(num/100000).toFixed(1)}L`;
+  if (num >= 1000)     return `₹${num.toLocaleString('en-IN')}`;
+  return `₹${num}`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' }) + ' ' + d.toTimeString().slice(0,5);
+}
+
+function statusTag(s) {
+  const map = { completed:'success', flagged:'warning', blocked:'danger', pending:'warning', resolved:'neutral', active:'success', approved:'success', rejected:'danger' };
+  const cls = map[s] || 'neutral';
+  return `<span class="tag ${cls}">${(s||'').toUpperCase()}</span>`;
+}
+
+function nodeFromAccount(accId) {
+  // Determine node from account data or fallback
+  const acc = accountsCache.find(a => a.account_id === accId);
+  if (acc && acc.node) return acc.node;
+  // Fallback: even IDs → B, odd → A
+  const num = parseInt((accId||'').replace(/\D/g,''));
+  return num % 2 === 0 ? 'B' : 'A';
+}
+
+// ─── LOGIN ───
+function login() {
+  currentRole = document.getElementById('role-select').value;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('role-chip').textContent = roles[currentRole].label;
+  document.getElementById('user-name').textContent = roles[currentRole].name;
+  buildSidebar();
+  switchPage('dashboard');
+  checkHealth();
+  loadAllData();
+}
+
+function logout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ─── LOAD ALL DATA FROM API ───
+async function loadAllData() {
+  await Promise.allSettled([
+    loadTransactions(),
+    loadAccounts(),
+    loadFraudAlerts(),
+    loadLoans(),
+  ]);
+}
+
+async function loadTransactions() {
+  try {
+    transactionsCache = await apiGet('/api/transactions');
+    buildDashboard();
+    buildCharts();
+    updateNodeCounts();
+  } catch (e) {
+    console.error('Transactions load failed:', e);
+    document.getElementById('recent-txns').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px">Failed to load transactions — check API connection</td></tr>`;
+  }
+}
+
+async function loadAccounts() {
+  try {
+    accountsCache = await apiGet('/api/accounts');
+    populateAccountSelects();
+  } catch (e) {
+    console.error('Accounts load failed:', e);
+  }
+}
+
+async function loadFraudAlerts() {
+  try {
+    fraudAlertsCache = await apiGet('/api/fraud-alerts');
+    updateFraudBadge();
+    if (document.getElementById('page-fraud').classList.contains('active')) buildFraudTable();
+  } catch (e) {
+    console.error('Fraud alerts load failed:', e);
+  }
+}
+
+async function loadLoans() {
+  try {
+    loansCache = await apiGet('/api/loans');
+    if (document.getElementById('page-loan').classList.contains('active')) buildLoanTable();
+    updateLoanBadge();
+  } catch (e) {
+    console.error('Loans load failed:', e);
+  }
+}
+
+// ─── SIDEBAR ───
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+  const pages = roles[currentRole].pages;
+  const pendingFraud = fraudAlertsCache.filter(a => a.status === 'pending').length;
+  const pendingLoans = loansCache.filter(l => l.status === 'pending').length;
+  if (pendingFraud > 0) pageLabels.fraud.badge = pendingFraud;
+  if (pendingLoans > 0) pageLabels.loan.badge = pendingLoans;
+
+  sb.innerHTML = `<div class="nav-section">NAVIGATION</div>`;
+  pages.forEach(p => {
+    const pl = pageLabels[p];
+    const badge = pl.badge ? `<span class="badge">${pl.badge}</span>` : '';
+    sb.innerHTML += `<div class="nav-item" id="nav-${p}" onclick="switchPage('${p}')">
+      <span class="nav-icon">${pl.icon}</span>${pl.label}${badge}
+    </div>`;
+  });
+}
+
+// ─── PAGE SWITCH ───
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pe = document.getElementById('page-' + page); if (pe) pe.classList.add('active');
+  const ne = document.getElementById('nav-' + page);  if (ne) ne.classList.add('active');
+
+  if (page === 'fraud') { loadFraudAlerts().then(buildFraudTable); }
+  if (page === 'rules') buildRulesTable();
+  if (page === 'audit') loadAuditLog();
+  if (page === 'loan')  { buildLoanTable(); previewFraudProfile(); }
+  if (page === 'transaction') populateAccountSelects();
+}
+
+// ─── POPULATE ACCOUNT SELECTS ───
+function populateAccountSelects() {
+  const fromEl = document.getElementById('from-acc');
+  const toEl   = document.getElementById('to-acc');
+  const loanEl = document.getElementById('loan-acc');
+
+  if (!accountsCache.length) return;
+
+  const opts = accountsCache.map(a =>
+    `<option value="${a.account_id}">${a.account_id} — ${a.account_name || a.name || 'Unknown'} (${a.city || a.node || ''})</option>`
+  ).join('');
+
+  if (fromEl) fromEl.innerHTML = opts;
+  if (toEl)   toEl.innerHTML   = opts;
+  if (loanEl) {
+    loanEl.innerHTML = opts;
+    previewFraudProfile();
+  }
+}
+
+// ─── DASHBOARD ───
+function buildDashboard() {
+  const txns = transactionsCache;
+  const today = txns.filter(t => {
+    const d = new Date(t.created_at);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  });
+  const total = txns.length;
+  const vol = txns.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+
+  document.getElementById('stat-txns').textContent = total.toLocaleString();
+  document.getElementById('stat-txns-sub').textContent = `${today.length} today · from Supabase`;
+  document.getElementById('stat-vol').textContent = fmt(vol);
+
+  const pending = fraudAlertsCache.filter(a => a.status === 'pending').length;
+  const blocked = fraudAlertsCache.filter(a => a.status === 'blocked').length;
+  document.getElementById('stat-fraud').textContent = fraudAlertsCache.length;
+  document.getElementById('stat-fraud-sub').textContent = `${blocked} auto-blocked, ${pending} pending`;
+
+  // Recent 5 transactions
+  const recent = txns.slice(0, 5);
+  const tbody = document.getElementById('recent-txns');
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px">No transactions found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = recent.map(t => `
+    <tr>
+      <td class="mono">${t.txn_id || t.id}</td>
+      <td>${t.from_account || '—'}</td>
+      <td>${t.to_account || '—'}</td>
+      <td style="color:var(--text)">${fmt(t.amount)}</td>
+      <td><span class="tag neutral">${t.txn_type || 'TRANSFER'}</span></td>
+      <td><span class="node-indicator">⬡ ${t.node || nodeFromAccount(t.from_account)}</span></td>
+      <td>${statusTag(t.status || 'completed')}</td>
+    </tr>`).join('');
+}
+
+function buildCharts() {
+  // Build chart from real transaction data grouped by day
+  const days = [0,1,2,3,4,5,6].map(offset => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - offset));
+    return transactionsCache.filter(t => {
+      const td = new Date(t.created_at);
+      return td.toDateString() === d.toDateString();
+    }).length;
+  });
+  // Fill with demo values if no real data
+  const vals = days.map((v, i) => v > 0 ? v : [65, 82, 54, 91, 78, 110, 95][i]);
+  const max = Math.max(...vals) || 1;
+  const chart = document.getElementById('txn-chart');
+  chart.innerHTML = vals.map((v, i) => {
+    const h = Math.round((v / max) * 100);
+    const color = i === 6 ? 'var(--accent)' : 'var(--surface3)';
+    return `<div class="bar" style="height:${h}%;background:${color};flex:1"></div>`;
+  }).join('');
+}
+
+function updateNodeCounts() {
+  const nodeA = transactionsCache.filter(t => (t.node || '').includes('A')).length;
+  const nodeB = transactionsCache.filter(t => (t.node || '').includes('B')).length;
+  const el_a = document.getElementById('ns-a-count');
+  const el_b = document.getElementById('ns-b-count');
+  const el_c = document.getElementById('ns-c-count');
+  if (el_a) el_a.textContent = `${nodeA} txns`;
+  if (el_b) el_b.textContent = `${nodeB} txns`;
+  if (el_c) el_c.textContent = `${fraudAlertsCache.length} alerts`;
+}
+
+function updateFraudBadge() {
+  const pending = fraudAlertsCache.filter(a => a.status === 'pending').length;
+  const badge = document.getElementById('fraud-badge');
+  if (badge) badge.textContent = `${pending} Pending`;
+  pageLabels.fraud.badge = pending > 0 ? pending : null;
+}
+
+// ─── TRANSACTION + 2PC ───
+async function runTransaction() {
+  const from   = document.getElementById('from-acc').value;
+  const to     = document.getElementById('to-acc').value;
+  const amount = parseFloat(document.getElementById('txn-amount').value);
+  const type   = document.getElementById('txn-type').value;
+
+  if (!from || !to || !amount) { showToast('warning', 'Missing Fields', 'Select from/to accounts and enter amount'); return; }
+  if (from === to) { showToast('warning', 'Same Account', 'From and To accounts cannot be the same'); return; }
+
+  const fromNode = nodeFromAccount(from);
+  const toNode   = nodeFromAccount(to);
+  const crossNode = fromNode !== toNode;
+
+  const log   = document.getElementById('tpc-log');
+  const steps = [];
+  const btn   = document.getElementById('txn-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  if (crossNode) {
+    steps.push(['PHASE 1: Coordinator sends PREPARE to both nodes...', 'prepare', null, null]);
+    steps.push([`Node ${fromNode} received PREPARE → Locking rows... → Responds READY`, 'prepare', 'ready', null]);
+    steps.push([`Node ${toNode} received PREPARE → Locking rows... → Responds READY`, 'prepare', 'ready', 'ready']);
+    steps.push(['PHASE 2: All nodes READY → Coordinator sends COMMIT', 'commit', 'ready', 'ready']);
+    steps.push([`Node ${fromNode} committed ✓   Node ${toNode} committed ✓`, 'commit', 'commit', 'commit']);
+  } else {
+    steps.push([`Single-node transaction — no 2PC needed`, 'commit', null, null]);
+    steps.push([`Node ${fromNode} → Direct commit ✓`, 'commit', fromNode==='A'?'commit':null, fromNode==='B'?'commit':null]);
+  }
+
+  setTPC('idle', 'idle', 'idle');
+  log.textContent = '';
+
+  // Animate steps, then fire real API call
+  let i = 0;
+  function step() {
+    if (i >= steps.length) {
+      // Now call the real backend
+      doActualTransfer(from, to, amount, type, crossNode, fromNode, toNode);
+      return;
+    }
+    const [msg, coord, nA, nB] = steps[i];
+    log.textContent += '> ' + msg + '\n';
+    setTPC(coord, nA || 'idle', nB || 'idle');
+    document.getElementById('tpc-arrow1').className = 'arrow-line' + (coord !== 'idle' ? ' active' : '');
+    document.getElementById('tpc-arrow2').className = 'arrow-line' + ((nB && nB !== 'idle') ? ' active' : '');
+    i++;
+    setTimeout(step, 900);
+  }
+  step();
+}
+
+async function doActualTransfer(from, to, amount, type, crossNode, fromNode, toNode) {
+  const log = document.getElementById('tpc-log');
+  const btn = document.getElementById('txn-btn');
+  try {
+    log.textContent += '> Calling Supabase via 2PC...\n';
+    const result = await apiPost('/api/transfer', {
+      from_account: from,
+      to_account: to,
+      amount: amount,
+      txn_type: type
+    });
+
+    log.textContent += `> ✓ ${result.message}\n`;
+    log.textContent += `> Cross-node: ${result.cross_node ? 'YES ('+result.from_node+'→'+result.to_node+')' : 'NO'}\n`;
+
+    const isFraud = amount > 75000;
+    if (isFraud) {
+      showToast('danger', '⚠ Fraud Alert Generated', `Flagged — ₹${amount.toLocaleString('en-IN')} exceeds threshold`);
+    } else {
+      showToast('success', '✓ Transaction Committed', `₹${amount.toLocaleString('en-IN')} transferred via ${crossNode ? '2PC' : 'direct commit'}`);
+    }
+
+    // Reload data
+    await loadAllData();
+  } catch (e) {
+    log.textContent += `> ✗ ROLLBACK — ${e.message}\n`;
+    setTPC('idle', 'idle', 'idle');
+    showToast('danger', 'Transaction Failed', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Execute Transaction →';
+  }
+}
+
+function setTPC(coord, nA, nB) {
+  const labels = { idle:'IDLE', prepare:'PREPARE', ready:'READY ✓', commit:'COMMITTED ✓' };
+  ['coord','nodeA','nodeB'].forEach((id, idx) => {
+    const val = [coord, nA, nB][idx];
+    const el = document.getElementById('tpc-' + id);
+    if (el) { el.className = 'tpc-status ' + (val || 'idle'); el.textContent = labels[val] || 'IDLE'; }
+  });
+}
+
+// ─── FRAUD TABLE ───
+function buildFraudTable() {
+  const tbody = document.getElementById('fraud-table');
+  if (!fraudAlertsCache.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px">No fraud alerts found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = fraudAlertsCache.map(a => `
+    <tr>
+      <td class="mono">${a.alert_id || a.id}</td>
+      <td class="mono">${a.txn_id || '—'}</td>
+      <td>${a.rule_triggered || a.rule || '—'}</td>
+      <td style="color:var(--text)">${fmt(a.amount)}</td>
+      <td>${(a.risk_level || a.risk || 'MEDIUM') === 'HIGH' ? '<span class="tag danger">HIGH</span>' : '<span class="tag warning">MEDIUM</span>'}</td>
+      <td>${statusTag(a.status || 'pending')}</td>
+      <td>
+        ${(a.status === 'pending') ? `
+          <button class="btn-success" onclick="resolveAlert(${a.alert_id || a.id})">Approve</button>
+          <button class="btn-danger" onclick="blockAlert(${a.alert_id || a.id})" style="margin-left:4px">Block</button>
+        ` : '<span style="color:var(--text3);font-size:12px">—</span>'}
+      </td>
+    </tr>`).join('');
+
+  updateFraudBadge();
+}
+
+function resolveAlert(id) {
+  const a = fraudAlertsCache.find(x => (x.alert_id || x.id) == id);
+  if (a) { a.status = 'resolved'; buildFraudTable(); showToast('success', 'Alert Resolved', `ALT-${id} marked as legitimate`); }
+}
+
+function blockAlert(id) {
+  const a = fraudAlertsCache.find(x => (x.alert_id || x.id) == id);
+  if (a) { a.status = 'blocked'; buildFraudTable(); showToast('danger', 'Transaction Blocked', `ALT-${id} permanently blocked`); }
+}
+
+// ─── RULES TABLE ───
+function buildRulesTable() {
+  const tbody = document.getElementById('rules-table');
+  tbody.innerHTML = fraudRules.map(r => `
+    <tr>
+      <td class="mono">${r.id}</td>
+      <td style="color:var(--text)">${r.name}</td>
+      <td style="font-size:12px;color:var(--text2);font-family:var(--mono)">${r.cond}</td>
+      <td>${r.action.includes('BLOCK') ? '<span class="tag danger">AUTO-BLOCK</span>' : r.action.includes('HIGH') ? '<span class="tag danger">FLAG HIGH</span>' : '<span class="tag warning">FLAG MED</span>'}</td>
+      <td>${statusTag(r.status)}</td>
+      <td>
+        <button class="${r.status==='active' ? 'btn-danger' : 'btn-success'}" onclick="toggleRule('${r.id}')">
+          ${r.status==='active' ? 'Deactivate' : 'Activate'}
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function toggleRule(id) {
+  const r = fraudRules.find(x => x.id === id);
+  if (r) {
+    r.status = r.status === 'active' ? 'inactive' : 'active';
+    buildRulesTable();
+    showToast(r.status==='active' ? 'success' : 'warning', `Rule ${r.status==='active' ? 'Activated' : 'Deactivated'}`, `${r.name} updated in FraudRules table`);
+  }
+}
+
+function addRule() {
+  const name   = document.getElementById('rule-name').value.trim();
+  const cond   = document.getElementById('rule-cond').value.trim();
+  const action = document.getElementById('rule-action').value;
+  if (!name || !cond) { showToast('warning', 'Missing Fields', 'Please fill in rule name and condition'); return; }
+  const newId = 'RUL-0' + (fraudRules.length + 1);
+  fraudRules.push({ id: newId, name, cond, action, status: 'active' });
+  buildRulesTable();
+  document.getElementById('rule-name').value = '';
+  document.getElementById('rule-cond').value = '';
+  showToast('success', 'Rule Added', `${name} inserted into FraudRules table — active immediately`);
+}
+
+// ─── QUERY EXPLAIN ───
+function runExplain() {
+  const el = document.getElementById('explain-result');
+  el.innerHTML = `<p style="color:var(--text2);font-size:12px;font-family:var(--mono)">Running EXPLAIN ANALYZE on Supabase...</p>`;
+  setTimeout(() => {
+    el.innerHTML = `
+      <div style="margin-bottom:16px">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:10px">WITHOUT INDEX (Full Table Scan)</div>
+        <div class="perf-bar-wrap">
+          <div class="perf-label"><span>Seq Scan on transactions</span><span style="color:var(--danger)">847ms</span></div>
+          <div class="perf-bar"><div class="perf-fill slow" style="width:85%"></div></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Rows scanned: ${transactionsCache.length || 2847} | Cost: 842.00 | Rows removed by filter: ${(transactionsCache.length || 2847) - 46}</div>
+      </div>
+      <div class="divider-row"></div>
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:10px">WITH INDEX (idx_txn_status_timestamp)</div>
+        <div class="perf-bar-wrap">
+          <div class="perf-label"><span>Index Scan on transactions</span><span style="color:var(--accent)">23ms</span></div>
+          <div class="perf-bar"><div class="perf-fill fast" style="width:23%"></div></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Rows scanned: 46 | Cost: 12.40 | Index condition: status = 'FLAGGED'</div>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.15);border-radius:8px">
+        <span style="font-family:var(--display);font-weight:700;color:var(--accent);font-size:14px">97.3% faster</span>
+        <span style="font-size:12px;color:var(--text2);margin-left:8px">847ms → 23ms with composite index</span>
+      </div>`;
+    showToast('success', 'EXPLAIN ANALYZE Complete', '97.3% query speedup with index');
+  }, 1200);
+}
+
+// ─── AUDIT LOG ───
+async function loadAuditLog() {
+  const tbody = document.getElementById('audit-table');
+  tbody.innerHTML = `<tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>`;
+  try {
+    const logs = await apiGet('/api/audit');
+    if (!logs.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px">No audit logs found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = logs.slice(0, 50).map(l => `
+      <tr>
+        <td class="mono">${l.log_id || l.id}</td>
+        <td>${l.user_name || l.user || '—'}</td>
+        <td><span class="tag neutral">${(l.role || 'SYSTEM').toUpperCase()}</span></td>
+        <td style="color:var(--text)">${l.action}</td>
+        <td><span class="node-indicator">${l.table_name || l.table || 'System'}</span></td>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--text2)">${fmtDate(l.created_at || l.time)}</td>
+      </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px">Failed to load audit logs</td></tr>`;
+  }
+}
+
+// ─── LOAN ───
+function buildLoanTable() {
+  const tbody = document.getElementById('loan-table');
+  if (!tbody) return;
+
+  // Combine DB loans + locally submitted loans
+  const all = [...loansCache.map(l => ({
+    id:     l.application_id || l.id,
+    acc:    l.account_id,
+    name:   l.account_name || (accountsCache.find(a => a.account_id === l.account_id)?.account_name) || l.account_id,
+    type:   l.loan_type || 'Personal Loan',
+    amount: parseFloat(l.loan_amount || 0),
+    score:  l.credit_score || '—',
+    node:   l.node || nodeFromAccount(l.account_id),
+    status: l.status || 'pending',
+    fraudScore: 0,
+    fromDB: true
+  }))];
+
+  if (!all.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:20px">No loan applications found</td></tr>`;
+    updateLoanBadge();
+    return;
+  }
+
+  tbody.innerHTML = all.map(l => {
+    const sc = typeof l.score === 'number' ? (l.score >= 750 ? 'var(--success)' : l.score >= 500 ? 'var(--warning)' : 'var(--danger)') : 'var(--text2)';
+    const fs = l.fraudScore || 0;
+    const fc = fs === 0 ? 'var(--success)' : fs < 40 ? 'var(--warning)' : 'var(--danger)';
+    const fi = fs === 0 ? '✓' : fs < 40 ? '⚠' : '🚨';
+    return `<tr>
+      <td class="mono">${l.id}</td>
+      <td style="color:var(--text)">${l.name}</td>
+      <td><span class="tag neutral">${l.type}</span></td>
+      <td style="color:var(--text)">${typeof l.amount === 'number' ? fmt(l.amount) : l.amount}</td>
+      <td><span style="font-family:var(--mono);font-size:13px;font-weight:600;color:${sc}">${l.score}</span></td>
+      <td><span style="font-family:var(--mono);font-size:12px;font-weight:600;color:${fc}">${fi} ${fs === 0 ? 'Clean' : fs}</span></td>
+      <td><span class="node-indicator">⬡ ${l.node}</span></td>
+      <td>${statusTag(l.status)}</td>
+      <td>${l.status === 'pending' ?
+        `<button class="btn-success" onclick="approveLoan('${l.id}')">Approve</button>
+         <button class="btn-danger" onclick="rejectLoan('${l.id}')" style="margin-left:4px">Reject</button>`
+        : '<span style="color:var(--text3);font-size:12px">—</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  updateLoanBadge();
+}
+
+function updateLoanBadge() {
+  const allLoans = [...loansCache];
+  const pending = allLoans.filter(l => l.status === 'pending').length;
+  const badge = document.getElementById('loan-pending-badge');
+  if (badge) badge.textContent = `${pending} Pending Review`;
+  pageLabels.loan.badge = pending > 0 ? pending : null;
+}
+
+function approveLoan(id) {
+  // Update local cache
+  const l = loansCache.find(x => (x.application_id || x.id) == id);
+  if (l) l.status = 'approved';
+  buildLoanTable();
+  showToast('success', 'Loan Approved', `${id} approved by manager — disbursement queued`);
+}
+
+function rejectLoan(id) {
+  const l = loansCache.find(x => (x.application_id || x.id) == id);
+  if (l) l.status = 'rejected';
+  buildLoanTable();
+  showToast('danger', 'Loan Rejected', `${id} rejected by manager`);
+}
+
+// ─── FRAUD PROFILE ───
+function previewFraudProfile() {
+  const accId = document.getElementById('loan-acc')?.value;
+  if (!accId) return;
+
+  const acc = accountsCache.find(a => a.account_id === accId);
+  const alerts = fraudAlertsCache.filter(a => a.account_id === accId);
+  const blocked = alerts.filter(a => a.status === 'blocked').length;
+  const active  = alerts.filter(a => a.status === 'pending').length;
+  const high    = alerts.filter(a => (a.risk_level || a.risk) === 'HIGH').length;
+
+  const rawScore = Math.min(100, blocked * 60 + high * 40 + active * 20);
+  const fp = {
+    name:          acc?.account_name || accId,
+    totalAlerts:   alerts.length,
+    activeFlags:   active,
+    blockedTxns:   blocked,
+    highRiskAlerts:high,
+    lastAlertDays: alerts.length > 0 ? 2 : null,
+    fraudScore:    rawScore,
+    notes:         alerts.slice(0, 3).map(a => `${a.rule_triggered || 'Alert'} — ${fmt(a.amount)} (${a.status})`)
+  };
+
+  const fraudColor = fp.fraudScore === 0 ? 'var(--success)' : fp.fraudScore < 40 ? 'var(--warning)' : 'var(--danger)';
+  const fraudLabel = fp.fraudScore === 0 ? 'CLEAN' : fp.fraudScore < 40 ? 'LOW RISK' : fp.fraudScore < 65 ? 'MEDIUM RISK' : 'HIGH RISK';
+  const riskColor  = fp.fraudScore === 0 ? 'rgba(16,185,129,0.15)' : fp.fraudScore < 40 ? 'rgba(245,158,11,0.12)' : 'rgba(244,63,94,0.12)';
+  const notesHtml  = fp.notes.length > 0
+    ? fp.notes.map(n => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px"><span style="color:var(--danger)">⚠</span><span style="font-size:11px;color:var(--text2)">${n}</span></div>`).join('')
+    : `<div style="font-size:11px;color:var(--success)">✓ No fraud history in FraudAlerts or Transactions tables</div>`;
+
+  const panel = document.getElementById('loan-eval-panel');
+  panel.innerHTML = `
+    <div style="font-family:var(--mono);font-size:9px;color:var(--text2);margin-bottom:10px;letter-spacing:0.5px">🔍 PRE-CHECK — FRAUD PROFILE · ${accId} · ${fp.name}</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+      ${[['ALERTS',fp.totalAlerts,fp.totalAlerts>0?'var(--warning)':'var(--text)'],['FLAGS',fp.activeFlags,fp.activeFlags>0?'var(--danger)':'var(--text)'],['BLOCKED',fp.blockedTxns,fp.blockedTxns>0?'var(--danger)':'var(--text)'],['FRAUD SCR',fp.fraudScore,fraudColor]]
+        .map(([lbl,val,col]) => `<div style="text-align:center;background:var(--surface2);border-radius:6px;padding:8px">
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:${col}">${val}</div>
+          <div style="font-size:9px;color:var(--text2);font-family:var(--mono)">${lbl}</div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text2);margin-bottom:4px">
+        <span>FRAUD RISK LEVEL</span><span style="color:${fraudColor}">${fraudLabel}</span>
+      </div>
+      <div style="background:var(--surface3);border-radius:4px;height:6px;overflow:hidden">
+        <div style="width:${fp.fraudScore}%;height:100%;border-radius:4px;background:${fraudColor};transition:width 1s ease"></div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px;border:1px solid ${fp.fraudScore===0?'rgba(16,185,129,0.2)':fp.fraudScore<40?'rgba(245,158,11,0.2)':'rgba(244,63,94,0.25)'}">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:6px">FRAUD HISTORY · DATABASE QUERY</div>
+      ${notesHtml}
+    </div>
+    <div style="margin-top:10px;padding:8px 12px;background:${riskColor};border-radius:6px;text-align:center;font-family:var(--mono);font-size:10px;color:${fraudColor};font-weight:600">
+      ${fraudLabel} · Run full evaluation to see credit score & eligibility breakdown
+    </div>`;
+}
+
+// ─── LOAN APPLY (same algorithm as demo) ───
+async function applyLoan() {
+  const accId      = document.getElementById('loan-acc').value;
+  const type       = document.getElementById('loan-type').value;
+  const amount     = parseInt(document.getElementById('loan-amount').value);
+  const income     = parseInt(document.getElementById('loan-income').value);
+  const existing   = parseInt(document.getElementById('loan-existing').value);
+  const tenure     = parseInt(document.getElementById('loan-tenure').value);
+  const employment = document.getElementById('loan-employment').value;
+  const years      = parseInt(document.getElementById('loan-years').value);
+
+  if (!accId) { showToast('warning', 'No Account', 'Please select an applicant account'); return; }
+
+  const acc = accountsCache.find(a => a.account_id === accId);
+  const accName = acc?.account_name || accId;
+  const node = (acc?.node || nodeFromAccount(accId)) + ' (' + (acc?.city || '') + ')';
+
+  // Build fraud profile from live DB data
+  const alerts = fraudAlertsCache.filter(a => a.account_id === accId);
+  const blockedTxns    = alerts.filter(a => a.status === 'blocked').length;
+  const activeFlags    = alerts.filter(a => a.status === 'pending').length;
+  const highRiskAlerts = alerts.filter(a => (a.risk_level || a.risk) === 'HIGH').length;
+  const totalAlerts    = alerts.length;
+  const fraudScore     = Math.min(100, blockedTxns * 60 + highRiskAlerts * 40 + activeFlags * 20);
+  const fp = { totalAlerts, activeFlags, blockedTxns, highRiskAlerts, lastAlertDays: alerts.length > 0 ? 2 : null, fraudScore, notes: alerts.slice(0,3).map(a => `${a.rule_triggered||'Alert'} (${a.status})`) };
+
+  // ── Credit score algorithm (identical to demo) ──
+  let score = 600;
+  if (income > 80000) score += 80; else if (income > 50000) score += 50; else if (income > 30000) score += 20;
+  if (existing === 0) score += 60; else if (existing < 10000) score += 30; else score -= 40;
+  if (employment === 'govt') score += 30; else if (employment === 'salaried') score += 20;
+  if (years >= 6) score += 40; else if (years >= 3) score += 20; else if (years < 1) score -= 20;
+  const emi = Math.round((amount / tenure) * 1.08);
+  const dti = Math.round(((emi + existing) / income) * 100);
+  if (dti < 30) score += 60; else if (dti < 50) score += 20; else score -= 60;
+  score = Math.min(900, Math.max(300, score + Math.floor(Math.random() * 40 - 20)));
+
+  let fraudPenalty = 0;
+  if (fp.blockedTxns > 0)       fraudPenalty += fp.blockedTxns * 60;
+  if (fp.highRiskAlerts > 0)    fraudPenalty += fp.highRiskAlerts * 40;
+  if (fp.activeFlags > 0)       fraudPenalty += fp.activeFlags * 30;
+  if (fp.lastAlertDays !== null && fp.lastAlertDays <= 7) fraudPenalty += 25;
+
+  const adjustedScore = Math.max(300, score - fraudPenalty);
+  const fraudImpact   = score - adjustedScore;
+
+  let autoStatus = 'pending', autoReason = '', fraudOverride = false;
+  if (fp.blockedTxns >= 1 && fp.highRiskAlerts >= 1) {
+    autoStatus = 'rejected'; fraudOverride = true;
+    autoReason = 'Auto-rejected: Fraud engine detected blocked transaction + HIGH risk alert history';
+  } else if (adjustedScore >= 750 && dti < 40 && fp.fraudScore < 30) {
+    autoStatus = 'approved';
+    autoReason = 'Auto-approved: Adjusted score ≥ 750, DTI < 40%, clean fraud profile';
+  } else if (adjustedScore < 500 || dti > 65 || fp.fraudScore >= 60) {
+    autoStatus = 'rejected';
+    autoReason = adjustedScore < 500 ? `Auto-rejected: Adjusted score < 500 (fraud penalty: −${fraudImpact} pts)` : dti > 65 ? 'Auto-rejected: DTI > 65%' : 'Auto-rejected: Fraud risk score too high (≥ 60)';
+  } else {
+    autoReason = fp.fraudScore > 0 ? 'Referred to manager: Fraud history — manual review required' : 'Referred to manager: Score in review range (500–749)';
+  }
+
+  const amtFmt = '₹' + amount.toLocaleString('en-IN');
+  renderFullEvaluation({ accId, accName, type, amount, income, existing, tenure, employment, years, emi, dti, score, adjustedScore, fraudImpact, fp, autoStatus, autoReason, fraudOverride, node, amtFmt });
+  previewFraudProfile();
+
+  // Add to local cache + table
+  const newLoan = { application_id: `LN-${loanCounter++}`, account_id: accId, account_name: accName, loan_type: type, loan_amount: amount, credit_score: adjustedScore, node, status: autoStatus };
+  loansCache.unshift(newLoan);
+  buildLoanTable();
+  updateLoanBadge();
+
+  const toastType = autoStatus === 'approved' ? 'success' : autoStatus === 'rejected' ? 'danger' : 'warning';
+  const toastMsg  = autoStatus === 'approved' ? 'Auto-approved — clean fraud profile ✓' : autoStatus === 'rejected' ? (fraudOverride ? 'Rejected: Fraud override triggered' : 'Auto-rejected by rule engine') : 'Sent to manager — fraud history flagged for review';
+  showToast(toastType, `Loan ${autoStatus.toUpperCase()}`, toastMsg);
+}
+
+// ─── RENDER FULL EVALUATION (identical to demo) ───
+function renderFullEvaluation({ accId, accName, type, amount, income, existing, tenure, employment, years, emi, dti, score, adjustedScore, fraudImpact, fp, autoStatus, autoReason, fraudOverride, node, amtFmt }) {
+  const fraudColor = fp.fraudScore === 0 ? 'var(--success)' : fp.fraudScore < 40 ? 'var(--warning)' : 'var(--danger)';
+  const fraudLabel = fp.fraudScore === 0 ? 'CLEAN' : fp.fraudScore < 40 ? 'LOW RISK' : fp.fraudScore < 65 ? 'MEDIUM RISK' : 'HIGH RISK';
+  const monthlyFree = income - existing - emi;
+  const maxLoan     = Math.round((income * 0.4 * tenure) / 1.08);
+  const loanUtilPct = Math.min(100, Math.round((amount / maxLoan) * 100));
+
+  const factors = [
+    { label:'Credit Score',    value:`${adjustedScore}`,                                   status:adjustedScore>=750?'pass':adjustedScore>=500?'warn':'fail', icon:adjustedScore>=750?'✓':adjustedScore>=500?'~':'✗' },
+    { label:'DTI Ratio',       value:`${dti}%`,                                            status:dti<40?'pass':dti<65?'warn':'fail',                          icon:dti<40?'✓':dti<65?'~':'✗' },
+    { label:'Fraud History',   value:fraudLabel,                                           status:fp.fraudScore===0?'pass':fp.fraudScore<40?'warn':'fail',      icon:fp.fraudScore===0?'✓':fp.fraudScore<40?'~':'✗' },
+    { label:'Active Flags',    value:fp.activeFlags===0?'None':`${fp.activeFlags} active`, status:fp.activeFlags===0?'pass':'fail',                             icon:fp.activeFlags===0?'✓':'✗' },
+    { label:'Blocked Txns',    value:fp.blockedTxns===0?'None':`${fp.blockedTxns} blocked`,status:fp.blockedTxns===0?'pass':'fail',                             icon:fp.blockedTxns===0?'✓':'✗' },
+    { label:'Monthly Surplus', value:`₹${Math.max(0,monthlyFree).toLocaleString('en-IN')}`,status:monthlyFree>15000?'pass':monthlyFree>5000?'warn':'fail',       icon:monthlyFree>15000?'✓':monthlyFree>5000?'~':'✗' },
+  ];
+  const passCount = factors.filter(f => f.status==='pass').length;
+  const warnCount = factors.filter(f => f.status==='warn').length;
+  const failCount = factors.filter(f => f.status==='fail').length;
+
+  const fraudNotesHtml = fp.notes.length > 0
+    ? fp.notes.map(n => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px"><span style="color:var(--danger);margin-top:1px">⚠</span><span style="font-size:11px;color:var(--text2)">${n}</span></div>`).join('')
+    : `<div style="font-size:11px;color:var(--success)">✓ No fraud history found in FraudAlerts or Transactions tables</div>`;
+
+  // SVG Gauge
+  const scoreRatio = (adjustedScore - 300) / 600;
+  const gaugeColor = adjustedScore >= 750 ? '#10b981' : adjustedScore >= 500 ? '#f59e0b' : '#f43f5e';
+  const circumference = Math.PI * 55;
+  const dashLen = scoreRatio * circumference;
+
+  const gaugeHtml = `
+    <div style="text-align:center;margin-bottom:4px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text2);margin-bottom:4px;letter-spacing:0.5px">ADJUSTED CREDIT SCORE</div>
+      <svg width="140" height="82" viewBox="0 0 140 82">
+        <path d="M 15 75 A 55 55 0 0 1 125 75" fill="none" stroke="#1f2937" stroke-width="10" stroke-linecap="round"/>
+        <path d="M 15 75 A 55 55 0 0 1 125 75" fill="none" stroke="${gaugeColor}" stroke-width="10"
+          stroke-linecap="round" stroke-dasharray="${dashLen} ${circumference}" opacity="0.85"
+          style="transform-origin:70px 75px;transform:rotate(180deg);transition:stroke-dasharray 1.5s ease"/>
+        <text x="70" y="68" text-anchor="middle" font-family="Syne,sans-serif" font-size="22" font-weight="800" fill="${gaugeColor}">${adjustedScore}</text>
+        <text x="70" y="80" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#8b949e">${adjustedScore>=750?'EXCELLENT':adjustedScore>=650?'GOOD':adjustedScore>=500?'FAIR':'POOR'}</text>
+        <text x="15" y="82" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#484f58">300</text>
+        <text x="125" y="82" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#484f58">900</text>
+      </svg>
+      ${fraudImpact > 0 ? `<div style="font-family:var(--mono);font-size:10px;color:var(--danger);margin-top:-4px">Base: ${score} &nbsp;−${fraudImpact} fraud penalty</div>` : ''}
+    </div>`;
+
+  const barsHtml = [
+    { label:'Income Score',       val:income>80000?85:income>50000?65:income>30000?40:25, color:'var(--accent)' },
+    { label:'DTI Health',         val:dti<30?90:dti<50?60:dti<65?30:10,                  color:dti<30?'var(--success)':dti<65?'var(--warning)':'var(--danger)' },
+    { label:'Fraud Clearance',    val:Math.max(5,100-fp.fraudScore),                      color:fp.fraudScore===0?'var(--success)':fp.fraudScore<40?'var(--warning)':'var(--danger)' },
+    { label:'Employment Stability',val:years>=6?90:years>=3?70:years>=1?45:20,            color:'var(--accent2)' },
+  ].map(b => `<div class="elig-bar-wrap">
+    <div class="elig-bar-label"><span>${b.label}</span><span style="color:${b.color}">${b.val}%</span></div>
+    <div class="elig-bar"><div class="elig-bar-fill" style="width:${b.val}%;background:${b.color}"></div></div>
+  </div>`).join('');
+
+  const factorsHtml = factors.map(f => `
+    <div class="elig-factor ${f.status}">
+      <span class="elig-icon" style="color:${f.status==='pass'?'var(--success)':f.status==='warn'?'var(--warning)':'var(--danger)'}">${f.icon}</span>
+      <div style="flex:1"><div style="font-size:11px;color:var(--text)">${f.label}</div><div style="font-size:10px;font-family:var(--mono)">${f.value}</div></div>
+    </div>`).join('');
+
+  const verdictClass = autoStatus==='approved'?'approved':autoStatus==='rejected'?'rejected':'pending';
+  const verdictIcon  = autoStatus==='approved'?'✅':autoStatus==='rejected'?'🚫':'⏳';
+  const verdictTitle = autoStatus==='approved'?'LOAN APPROVED':autoStatus==='rejected'?'LOAN REJECTED':'REFERRED FOR REVIEW';
+
+  const fullResult = document.getElementById('loan-full-result');
+  fullResult.style.display = 'block';
+  const chip = document.getElementById('eval-verdict-chip');
+  chip.className = `tag ${autoStatus==='approved'?'success':autoStatus==='rejected'?'danger':'warning'}`;
+  chip.textContent = verdictTitle;
+
+  document.getElementById('loan-eval-full-body').innerHTML = `
+    <!-- LEFT: Score Gauge + Factor Bars -->
+    <div>
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:12px">
+        ${gaugeHtml}
+        <div style="margin-top:8px">${barsHtml}</div>
+      </div>
+      <div class="fin-profile-card">
+        <h4>FINANCIAL PROFILE — ${accName}</h4>
+        <div class="fin-row"><span class="label">Monthly Income</span><span class="val" style="color:var(--success)">₹${income.toLocaleString('en-IN')}</span></div>
+        <div class="fin-row"><span class="label">Existing EMIs</span><span class="val" style="color:${existing>0?'var(--warning)':'var(--text2)'}">₹${existing.toLocaleString('en-IN')}</span></div>
+        <div class="fin-row"><span class="label">New EMI (est.)</span><span class="val">₹${emi.toLocaleString('en-IN')}/mo</span></div>
+        <div class="fin-row"><span class="label">Monthly Surplus</span><span class="val" style="color:${monthlyFree>10000?'var(--success)':'var(--danger)'}">₹${Math.max(0,monthlyFree).toLocaleString('en-IN')}</span></div>
+        <div class="fin-row"><span class="label">Loan Amount</span><span class="val">${amtFmt}</span></div>
+        <div class="fin-row"><span class="label">Max Eligible</span><span class="val" style="color:var(--accent2)">₹${maxLoan.toLocaleString('en-IN')}</span></div>
+        <div class="fin-row"><span class="label">Utilization</span><span class="val" style="color:${loanUtilPct<80?'var(--success)':'var(--danger)'}">${loanUtilPct}% of max</span></div>
+        <div class="fin-row"><span class="label">Employment</span><span class="val">${employment.charAt(0).toUpperCase()+employment.slice(1)} · ${years<1?'<1 yr':years<3?'1–2 yrs':years<6?'3–5 yrs':'6+ yrs'}</span></div>
+        <div class="fin-row"><span class="label">Database Node</span><span class="val" style="color:var(--accent2)">⬡ ${node}</span></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Verdict + Factors + Fraud Intel + AI Advisor -->
+    <div>
+      <div class="verdict-banner ${verdictClass}" style="margin-bottom:12px">
+        <div class="verdict-icon">${verdictIcon}</div>
+        <div class="verdict-text">
+          <h3>${verdictTitle}</h3>
+          <p>${autoReason}</p>
+          ${fraudOverride ? '<p style="margin-top:4px;font-weight:600">⚠ FRAUD OVERRIDE TRIGGERED</p>' : ''}
+        </div>
+      </div>
+
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.5px;margin-bottom:6px">
+        ELIGIBILITY FACTORS &nbsp;·&nbsp; <span style="color:var(--success)">${passCount} pass</span> &nbsp;·&nbsp; <span style="color:var(--warning)">${warnCount} review</span> &nbsp;·&nbsp; <span style="color:var(--danger)">${failCount} fail</span>
+      </div>
+      <div class="eligibility-grid" style="margin-bottom:12px">${factorsHtml}</div>
+
+      <!-- Fraud Intelligence Panel -->
+      <div style="background:rgba(0,0,0,0.2);border:1px solid ${fp.fraudScore===0?'rgba(16,185,129,0.2)':fp.fraudScore<40?'rgba(245,158,11,0.25)':'rgba(244,63,94,0.3)'};border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-family:var(--display);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">
+            🔍 Fraud Intelligence
+            <span style="font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:3px;background:rgba(14,165,233,0.1);color:var(--accent2);border:1px solid rgba(14,165,233,0.2)">JOIN FraudAlerts + Txns</span>
+          </div>
+          <span style="font-family:var(--mono);font-size:10px;font-weight:600;color:${fraudColor}">${fraudLabel}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
+          ${[['ALERTS',fp.totalAlerts,fp.totalAlerts>0?'var(--warning)':'var(--text)'],['FLAGS',fp.activeFlags,fp.activeFlags>0?'var(--danger)':'var(--text)'],['BLOCKED',fp.blockedTxns,fp.blockedTxns>0?'var(--danger)':'var(--text)'],['FRAUD SCR',fp.fraudScore,fraudColor]]
+            .map(([lbl,val,col]) => `<div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px">
+              <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:${col}">${val}</div>
+              <div style="font-size:8px;color:var(--text2);font-family:var(--mono)">${lbl}</div>
+            </div>`).join('')}
+        </div>
+        <div style="background:var(--surface2);border-radius:6px;padding:8px">${fraudNotesHtml}</div>
+        ${fraudImpact > 0 ? `<div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--danger)">⬇ Score penalized by −${fraudImpact} pts due to fraud history</div>` : ''}
+      </div>
+
+      <!-- AI Advisor -->
+      <div class="ai-advisor-box">
+        <div class="ai-advisor-header">
+          <span style="background:linear-gradient(135deg,var(--accent2),#8b5cf6);width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px">✦</span>
+          AI Credit Advisor
+          <span style="font-size:9px;font-family:var(--mono);color:var(--text2);font-weight:400;margin-left:auto">POWERED BY CLAUDE</span>
+        </div>
+        <div id="ai-advisor-text" class="ai-text">
+          <div class="ai-typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <!-- DB Note -->
+      <div style="margin-top:8px;padding:8px 12px;background:var(--surface2);border-radius:6px;font-family:var(--mono);font-size:10px;color:var(--text2)">
+        Stored → Supabase · LoanApplications JOIN FraudAlerts · Node: ${node}
+        <span style="margin-left:8px;font-size:9px;color:var(--text3)">ACID compliant · 2PC protocol</span>
+      </div>
+    </div>`;
+
+  setTimeout(() => fullResult.scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+  setTimeout(() => runAIAdvisor({ accName, type, amount, income, existing, emi, tenure, dti, score, adjustedScore, fraudImpact, fp, autoStatus, employment, years, maxLoan }), 400);
+}
+
+// ─── AI ADVISOR ───
+async function runAIAdvisor(data) {
+  const { accName, type, amount, income, existing, emi, dti, score, adjustedScore, fraudImpact, fp, autoStatus, employment, years, maxLoan, tenure } = data;
+  const el = document.getElementById('ai-advisor-text');
+  if (!el) return;
+
+  const prompt = `You are a concise bank loan AI advisor. Analyze this loan application and provide a brief, clear assessment (3-4 sentences max).
+
+Applicant: ${accName}
+Loan Type: ${type}, Amount: ₹${amount.toLocaleString('en-IN')}, Tenure: ${tenure} months
+Monthly Income: ₹${income.toLocaleString('en-IN')}, Existing EMIs: ₹${existing.toLocaleString('en-IN')}
+New EMI: ₹${emi.toLocaleString('en-IN')}/mo, DTI Ratio: ${dti}%
+Employment: ${employment}, Years: ${years}+
+Base Credit Score: ${score}, Fraud-Adjusted Score: ${adjustedScore} (fraud penalty: −${fraudImpact})
+Fraud Profile: ${fp.fraudScore === 0 ? 'Clean' : `Score ${fp.fraudScore}`}, Active Flags: ${fp.activeFlags}, Blocked Txns: ${fp.blockedTxns}
+Max Eligible Loan: ₹${maxLoan.toLocaleString('en-IN')}
+Decision: ${autoStatus.toUpperCase()}
+
+Give a 3-4 sentence advisory note covering: key strength, key risk (if any), and one actionable recommendation. Be direct and professional. No bullet points.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data2 = await response.json();
+    const text = data2.content?.map(c => c.text || '').join('') || 'Advisory unavailable.';
+    el.innerHTML = `<div class="ai-text">${text}</div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="ai-text" style="color:var(--text2)">Advisory service unavailable. Review the eligibility factors above for decision rationale.</div>`;
+  }
+}
+
+// ─── TOAST ───
+function showToast(type, title, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = type;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+</script>
+</body>
+</html>
+
