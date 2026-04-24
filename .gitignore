@@ -1,0 +1,6 @@
+# Never upload these to GitHub
+.env
+node_modules/
+.DS_Store
+*.log
+npm-debug.log*
